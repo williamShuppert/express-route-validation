@@ -7,6 +7,10 @@
   "scripts": {
     "build": "tsup"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/williamShuppert/express-route-validation"
+  },
   "keywords": [
     "validation",
     "validate",
@@ -18,10 +22,10 @@
   "author": "William Shuppert",
   "license": "ISC",
   "dependencies": {
-    "@types/express": "^4.17.21",
     "express": "^4.19.2"
   },
   "devDependencies": {
+    "@types/express": "^4.17.21",
     "tsup": "^8.2.3",
     "typescript": "^5.5.4"
   },
