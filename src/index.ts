@@ -107,16 +107,17 @@ let validate: ValidateFunction<any> = (data: any, schema: any) => {
     throw Error("validate function not configured.")
 }
 
-export type ValidationErrorHandler<ErrorType> = ((errors: RequestErrorData<ErrorType>[], req: Request, res: Response, next: NextFunction) => void) | undefined
+export type RequestValidationErrorHandler<ErrorType> = ((errors: RequestErrorData<ErrorType>[], req: Request, res: Response, next: NextFunction) => void) | undefined
+export type ResponseValidationErrorHandler<ErrorType> = ((error: ErrorType, req: Request, res: Response, next: NextFunction) => void) | undefined
 export type MissingSchemaErrorHandler = ((error: MissingSchemaErrorData, req: Request, res: Response, next: NextFunction) => void) | undefined
-let badRequestHandler: ValidationErrorHandler<any> = undefined
-let badResponseHandler: ValidationErrorHandler<any> = undefined
+let badRequestHandler: RequestValidationErrorHandler<any> = undefined
+let badResponseHandler: ResponseValidationErrorHandler<any> = undefined
 let missingResponseSchemaHandler: MissingSchemaErrorHandler = undefined
 
 export interface ValidatorConfig<SchemaType, ErrorType> { 
     validator: ValidateFunction<SchemaType>
-    badRequestHandler?: ValidationErrorHandler<ErrorType>
-    badResponseHandler?: ValidationErrorHandler<ErrorType>
+    badRequestHandler?: RequestValidationErrorHandler<ErrorType>
+    badResponseHandler?: ResponseValidationErrorHandler<ErrorType>
     missingResponseSchemaHandler?: MissingSchemaErrorHandler
 }
 export default <SchemaType, ErrorType>(config: ValidatorConfig<SchemaType, ErrorType>) => {
