@@ -60,7 +60,7 @@ const responseValidator = (options: ValidatorOptions, req: Request, res: Respons
         const validation = validate(body, schema)
 
         if (validation.success)
-            original(body)
+            original(validation.data)
         else if (badResponseHandler)
             badResponseHandler(validation.error, req, res, next)
         else
