@@ -15,20 +15,27 @@ interface ValidatorOptions {
 }
 
 export const routeValidator = (options: ValidatorOptions) => (req: Request, res: Response, next: NextFunction) => {
-    const originalSend = res.send
-    responseValidator(options, req, res, next, originalSend)
-    requestValidator(options, req, res, next, originalSend)
+    const resetSends = responseValidator(options, req, res, next)
+    requestValidator(options, req, res, next, resetSends)
 }
 
-const responseValidator = (options: ValidatorOptions, req: Request, res: Response, next: NextFunction, originalSend: Send) => {
+const responseValidator = (options: ValidatorOptions, req: Request, res: Response, next: NextFunction) => {
+    const originalSend = res.send.bind(res)
+    const originalJson = res.json.bind(res)
 
-    res.send = (body: any) => {
+    const resetSends = () => {
         res.send = originalSend
+        res.json = originalJson
+    }
+
+    const send = (original: Send) => (body: any) => {
+        resetSends()
+
         const schema = options.response[res.statusCode]
 
         // Schema doesn't need to be defined for status code 400 if a bad request handler already defined
         if (res.statusCode === 400 && badRequestHandler) {
-            res.send(body)
+            original(body)
             return res
         }
 
@@ -53,7 +60,7 @@ const responseValidator = (options: ValidatorOptions, req: Request, res: Respons
         const validation = validate(body, schema)
 
         if (validation.success)
-            res.send(body)
+            original(body)
         else if (badResponseHandler)
             badResponseHandler(validation.error, req, res, next)
         else
@@ -61,9 +68,14 @@ const responseValidator = (options: ValidatorOptions, req: Request, res: Respons
 
         return res
     }
+
+    res.json = send(originalJson)
+    res.send = send(originalSend)
+
+    return resetSends
 }
 
-const requestValidator = (options: ValidatorOptions, req: Request, res: Response, next: NextFunction, originalSend: Send) => {
+const requestValidator = (options: ValidatorOptions, req: Request, res: Response, next: NextFunction, resetSends: () => void) => {
     const errors: RequestErrorData<any>[] = []
     for (let key in options.request) {
         const data = (req as any)[key]
@@ -78,7 +90,7 @@ const requestValidator = (options: ValidatorOptions, req: Request, res: Response
 
     // Handle errors or pass to next express error handler
     if (errors.length > 0) {
-        res.send = originalSend // Don't need to validate response anymore
+        resetSends() // Don't need to validate response anymore
 
         if (badRequestHandler)
             badRequestHandler(errors, req, res, next)
@@ -90,11 +102,11 @@ const requestValidator = (options: ValidatorOptions, req: Request, res: Response
     // No validation errors, run route while catching any sync/async errors
     new Promise(resolve => 
         resolve(options.route(req, res, err => {
-            res.send = originalSend // Don't need to validate response anymore
+            resetSends() // Don't need to validate response anymore
             next(err)
         })))
         .catch(err => {
-            res.send = originalSend // Don't need to validate response anymore
+            resetSends() // Don't need to validate response anymore
             next(err)
         }) // Catch runtime errors and pass to next express error handler
 }
