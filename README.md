@@ -8,6 +8,9 @@ Ensure your Express routes are always receiving and returning the correct data w
 
 Configure the route validator:
 ```ts
+import Joi from 'joi'
+import routeValidationConfig from 'express-route-validation'
+
 validationConfig<Joi.ObjectSchema<any>, Joi.ValidationError>({
     validator(data, schema) {
         const parse = schema.validate(data)
@@ -35,6 +38,9 @@ validationConfig<Joi.ObjectSchema<any>, Joi.ValidationError>({
 
 Use the route validator middleware in your router:
 ```ts
+import Joi from 'joi'
+import { routeValidator } from 'express-route-validation'
+
 app.get('/users/:id', routeValidator({
     response: { 200: Joi.object({ name: Joi.string() }) },
     request: { params: Joi.object({ id: Joi.string().uuid() }) },
@@ -48,6 +54,9 @@ app.get('/users/:id', routeValidator({
 ### Zod
 Configure the route validator:
 ```ts
+import routeValidationConfig from 'express-route-validation'
+import { ZodError, ZodSchema } from 'zod'
+
 validationConfig<ZodSchema, ZodError>({
     validator(data, schema) {
         try {
@@ -77,6 +86,9 @@ validationConfig<ZodSchema, ZodError>({
 
 Use the route validator middleware in your router:
 ```ts
+import { routeValidator } from 'express-route-validation'
+import z from 'zod'
+
 app.get('/users/:id', routeValidator({
     response: { 200: z.object({ name: z.string() }) },
     request: { params: z.object({ id: z.string().uuid() }) },
