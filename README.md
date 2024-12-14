@@ -1,6 +1,6 @@
 # express-route-validation
 
-[![npm version](https://badge.fury.io/js/express-route-validation.svg)](https://badge.fury.io/js/express-route-validation)
+![npm version](https://img.shields.io/npm/v/express-route-validation)
 ![coverage](https://img.shields.io/badge/coverage-100%25-44cc11?style=flat)
 
 Express middleware for request and response validation.
