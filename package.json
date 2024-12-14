@@ -1,5 +1,6 @@
 {
   "name": "express-route-validation",
+  "description": "express middleware for request and response validation",
   "version": "0.1.0",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -40,7 +41,6 @@
   ],
   "author": "William Shuppert",
   "license": "MIT",
-  "description": "",
   "dependencies": {
     "express": "^4.21.2"
   },
