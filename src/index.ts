@@ -1,143 +1,135 @@
-import { NextFunction, Request, RequestHandler, Response, Send } from 'express'
-import { MissingSchemaError, MissingSchemaErrorData, RequestErrorData, RequestValidationError, ResponseValidationError } from './validation-error'
+import { NextFunction, Request, RequestHandler, Response, Send } from "express";
 
-export * from './validation-error'
+export type ValidationErrorType = 'missing schema' | 'bad response' | 'missing validator';
 
-interface ValidatorOptions {
-    response: {[statusCode: number]: any}
-    request?: {
-        body?: any
-        query?: any
-        params?: any
-        headers?: any
-    }
-    route: RequestHandler
+export class ValidationError extends Error {
+	type: ValidationErrorType;
+
+	constructor(message: string, type: ValidationErrorType) {
+		super(message)
+		this.message = message
+		this.type = type
+	}
 }
 
-export const routeValidator = (options: ValidatorOptions) => (req: Request, res: Response, next: NextFunction) => {
-    const resetSends = responseValidator(options, req, res, next)
-    requestValidator(options, req, res, next, resetSends)
+export type ErrorHandler = (
+	error: any,
+	req: Request,
+	res: Response,
+	next: NextFunction,
+) => void;
+
+export type ParseSuccess = {
+	success: true;
+	data: any;
+	error?: never;
+};
+
+export type ParseError = {
+	success: false;
+	error: any;
+	data?: never;
+};
+
+export type ParseReturnType = ParseSuccess | ParseError;
+
+type RouteResponseValidations = { [statusCode: number]: any };
+
+export interface Config {
+	badRequestHandler?: ErrorHandler;
+	validator?: (data: any, schema: any) => ParseReturnType;
 }
 
-const responseValidator = (options: ValidatorOptions, req: Request, res: Response, next: NextFunction) => {
-    const originalSend = res.send.bind(res)
-    const originalJson = res.json.bind(res)
+export const defaultBadRequestHandler: ErrorHandler = (
+	_error,
+	_req,
+	res,
+	_next,
+) => {
+	res.status(400).json({ message: "Bad Request" });
+};
 
-    const resetSends = () => {
-        res.send = originalSend
-        res.json = originalJson
-    }
+let options: Config = {
+	badRequestHandler: defaultBadRequestHandler,
+};
 
-    const send = (original: Send) => (body: any) => {
-        resetSends()
-
-        const schema = options.response[res.statusCode]
-
-        // Schema doesn't need to be defined for status code 400 if a bad request handler already defined
-        if (res.statusCode === 400 && badRequestHandler) {
-            original(body)
-            return res
-        }
-
-        // Ensure a schema is defined for specific response
-        if (schema === undefined) {
-            const error = {
-                statusCode: res.statusCode,
-                method: req.method,
-                originalUrl: req.originalUrl,
-                message: `Response of ${res.statusCode} is missing a validation schema at (${req.method}) ${req.originalUrl}`
-            }
-
-            if (missingResponseSchemaHandler)
-                missingResponseSchemaHandler(error, req, res, next)
-            else
-                next(new MissingSchemaError(error))
-
-            return res
-        }
-
-        // Validate against schema
-        const validation = validate(body, schema)
-
-        if (validation.success)
-            original(validation.data)
-        else if (badResponseHandler)
-            badResponseHandler(validation.error, req, res, next)
-        else
-            next(new ResponseValidationError(validation.error))
-
-        return res
-    }
-
-    res.json = send(originalJson)
-    res.send = send(originalSend)
-
-    return resetSends
+export function config(config: Config) {
+	options = {
+		...options,
+		...config,
+	};
 }
 
-const requestValidator = (options: ValidatorOptions, req: Request, res: Response, next: NextFunction, resetSends: () => void) => {
-    const errors: RequestErrorData<any>[] = []
-    for (let key in options.request) {
-        const data = (req as any)[key]
-        if (data === undefined) continue
-        const schema = (options.request as any)[key] as any
+export const validateRequest =
+	(requestSchema: any) =>
+	async (req: Request, res: Response, next: NextFunction) => {
+		if (!options.validator) {
+			next(new ValidationError('Validator not set', 'missing validator'))
+			return
+		}
 
-        // Validate
-        const validation = validate(data, schema)
-        if (validation.success) (req as any)[key] = validation.data
-        else errors.push({ location: key, error: validation.error })
-    }
+		const parse = options.validator!(req, requestSchema);
 
-    // Handle errors or pass to next express error handler
-    if (errors.length > 0) {
-        resetSends() // Don't need to validate response anymore
+		if (!parse.success) {
+			options.badRequestHandler!(parse.error, req, res, next);
+			return;
+		}
 
-        if (badRequestHandler)
-            badRequestHandler(errors, req, res, next)
-        else
-            next(new RequestValidationError(errors))
-        return
-    }
+		req = parse.data as any;
 
-    // No validation errors, run route while catching any sync/async errors
-    new Promise(resolve => 
-        resolve(options.route(req, res, err => {
-            resetSends() // Don't need to validate response anymore
-            next(err)
-        })))
-        .catch(err => {
-            resetSends() // Don't need to validate response anymore
-            next(err)
-        }) // Catch runtime errors and pass to next express error handler
-}
+		next();
+	};
 
+export const validateResponse =
+	(responseSchemas: RouteResponseValidations): RequestHandler =>
+	async (req, res, next) => {
+		if (!options.validator) {
+			next(new ValidationError('Validator not set', 'missing validator'))
+			return
+		}
 
+		const sendTypes = ["send", "json", "sendStatus"];
+		const originals = new Map<string, Send>();
+		for (const type of sendTypes)
+			originals.set(type, (res as any)[type].bind(res));
 
+		const builder = (send: Send) => (body?: any) => {
+			// Reset sends
+			for (let [type, func] of originals) (res as any)[type] = func;
 
-type ValidateFunction<SchemaType> = (data: any, schema: SchemaType) => { success: true, data: any } | { success: false, error: any }
-let validate: ValidateFunction<any> = (data: any, schema: any) => {
-    throw Error("validate function not configured.")
-}
+			// Allow any 5XX codes to be sent without validation
+			if (res.statusCode >= 500 && res.statusCode <= 511) {
+				res.send(body);
+				return res;
+			}
 
-export type RequestValidationErrorHandler<ErrorType> = ((errors: RequestErrorData<ErrorType>[], req: Request, res: Response, next: NextFunction) => void) | undefined
-export type ResponseValidationErrorHandler<ErrorType> = ((error: ErrorType, req: Request, res: Response, next: NextFunction) => void) | undefined
-export type MissingSchemaErrorHandler = ((error: MissingSchemaErrorData, req: Request, res: Response, next: NextFunction) => void) | undefined
-let badRequestHandler: RequestValidationErrorHandler<any> = undefined
-let badResponseHandler: ResponseValidationErrorHandler<any> = undefined
-let missingResponseSchemaHandler: MissingSchemaErrorHandler = undefined
+			// Ensure schema exists
+			const schema = responseSchemas[res.statusCode];
+			if (schema === undefined)
+				throw new ValidationError(
+					`Response of ${res.statusCode} is missing a validation schema at (${req.method}) ${req.originalUrl}`,
+					'missing schema'
+				);
 
-export interface ValidatorConfig<SchemaType, ErrorType> { 
-    validator: ValidateFunction<SchemaType>
-    badRequestHandler?: RequestValidationErrorHandler<ErrorType>
-    badResponseHandler?: ResponseValidationErrorHandler<ErrorType>
-    missingResponseSchemaHandler?: MissingSchemaErrorHandler
-}
-export default <SchemaType, ErrorType>(config: ValidatorConfig<SchemaType, ErrorType>) => {
-    validate = config.validator
-    if (config.badRequestHandler)
-        badRequestHandler = config.badRequestHandler
-    if (config.badResponseHandler)
-        badResponseHandler = config.badResponseHandler
-    if (config.missingResponseSchemaHandler)
-        missingResponseSchemaHandler = config.missingResponseSchemaHandler
-}
+			// Validate body
+			const parse = options.validator!(body, schema);
+			if (!parse.success)
+				throw new ValidationError(
+					`Response of ${res.statusCode} does not match the validation schema at (${req.method}) ${req.originalUrl}    Zod Error Message: ${parse.error.message}`,
+					'bad response'
+				);
+
+			return send(parse.data);
+		};
+
+		// Override send functions
+		for (let [type, func] of originals) (res as any)[type] = builder(func);
+
+		// sendStatus has to set the status code first
+		res.sendStatus = (code: number) => {
+			res.status(code);
+			return builder(originals.get("send")!)();
+		};
+
+		next();
+	};

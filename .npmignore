@@ -1,5 +1,4 @@
-/src
-/node_modules
-/examples
-
-.env*
+node_modules
+dist/testing
+src
+coverage

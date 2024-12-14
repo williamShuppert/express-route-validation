@@ -1,100 +1,128 @@
 # express-route-validation
 
-Ensure your Express routes are always receiving and returning the correct data with this express validation middleware. Seamlessly validate request and response objects, catching any instances where your route is returning unwanted data. Effortlessly handle bad request responses and integrate with popular validation libraries like Zod or Joi
+[![npm version](https://badge.fury.io/js/express-route-validation.svg)](https://badge.fury.io/js/express-route-validation)
+![coverage](https://img.shields.io/badge/coverage-100%25-44cc11?style=flat)
 
-## Examples
+Express middleware for request and response validation.
 
-### Joi
+- 🔒 Request validation
+- ✨ Response validation
+- 💪 100% test coverage
+- 📦 Zero dependencies (except peer dependencies)
+- 🔥 TypeScript support
 
-Configure the route validator:
-```ts
-import Joi from 'joi'
-import routeValidationConfig from 'express-route-validation'
+Ensure your Express routes are always receiving and returning the correct data with this express validation middleware. Seamlessly validate request and response objects, catching any instances where your route is returning unwanted data. Effortlessly handle bad request responses and integrate with popular validation libraries like Zod or Joi.
 
-validationConfig<Joi.ObjectSchema<any>, Joi.ValidationError>({
-    validator(data, schema) {
-        const parse = schema.validate(data)
-        if (parse.error)
-            return { success: false, error: parse.error }
-        return { success: true, data: parse.value }
-    },
-    badRequestHandler(errs, req, res) {
-        res.status(400).json({
-            message: "Bad Request",
-            errors: errs.map(r => r.error.details.map(d => ({ // Reformat errors to liking
-                location: `${r.location}.${d.path.join('.')}`,
-                message: d.message
-            }))).flat()
-        })
-    },
-    badResponseHandler(errors, req, res) {
-        res.status(500).json({ message: "Invalid Server Response" })
-    },
-    missingResponseSchemaHandler(error, req, res) {
-        res.status(500).json({ message: error.message })
-    },
-})
+## Installation
+
+```bash
+npm install express-route-validation
 ```
 
-Use the route validator middleware in your router:
-```ts
-import Joi from 'joi'
-import { routeValidator } from 'express-route-validation'
+## Usage
 
-app.get('/users/:id', routeValidator({
-    response: { 200: Joi.object({ name: Joi.string() }) },
-    request: { params: Joi.object({ id: Joi.string().uuid() }) },
-    route: (req, res, next) => {
-        const user = getUserById(req.params.id)
-        res.json(user)
-    }
-}))
+### Configure Validator
+
+```typescript
+import { config } from 'express-validator';
+import { z } from 'zod';
+import Joi from 'joi';
+
+// Configure with Zod validator
+config({ 
+  // Initial setup of a validator is required
+  validator: (data, schema: z.ZodSchema) => schema.safeParse(data),
+  badRequestHandler: (err: ZodError, req, res) => res.status(400).json({ errors: err.errors })
+});
+
+// Configure with Joi validator
+config({
+  // Initial setup of a validator is required
+  validator: (data, schema: Joi.ObjectSchema) => {
+    const result = schema.validate(data);
+    return result.error
+      ? { success: false, error: result.error }
+      : { success: true, data: result.value };
+  },
+  // Same as default bad request handler
+  badRequestHandler: (err, req, res) => res.status(400).json({ message: "Bad Request" })
+});
 ```
 
-### Zod
-Configure the route validator:
-```ts
-import routeValidationConfig from 'express-route-validation'
-import { ZodError, ZodSchema } from 'zod'
+### Request Validation
 
-validationConfig<ZodSchema, ZodError>({
-    validator(data, schema) {
-        try {
-            const parse = schema.parse(data)
-            return { success: true, data: parse }
-        } catch (err) {
-            return { success: false, error: err }
-        }
-    },
-    badRequestHandler(errs, req, res, next) {
-        res.status(400).json({
-            message: "Bad Request",
-            errors: errs.map(d => d.error.errors.map(e => ({ // Reformat errors to liking
-                path: `${d.location}.${e.path.join('.')}`,
-                message: e.message
-            }))).flat()
-        })
-    },
-    badResponseHandler(errors, req, res, next) {
-        res.status(500).json({ message: "Invalid Server Response" })
-    },
-    missingResponseSchemaHandler(error, req, res, next) {
-        res.status(500).json({ message: error.message })
-    },
-})
+Validate query parameters, body, and headers using schemas (Zod used in example):
+
+```typescript
+import express from 'express';
+import { validateRequest } from 'express-zod-validation';
+import { z } from 'zod';
+
+const app = express();
+app.use(express.json());
+
+app.post(
+  '/user',
+  validateRequest(
+    z.object({
+      body: z.object({
+        name: z.string().min(2),
+        age: z.number().min(18),
+      }),
+      query: z.object({
+        adminKey: z.string(),
+      }),
+      headers: z.object({
+        'x-api-key': z.string(),
+      }),
+    }),
+  ),
+  validateResponse({
+    200: z.object({ success: z.literal(true) })
+  }),
+  (req, res) => {
+    // All validations passed, req has all valid values as above
+    res.json({ success: true });
+  },
+);
 ```
 
-Use the route validator middleware in your router:
-```ts
-import { routeValidator } from 'express-route-validation'
-import z from 'zod'
+### Response Validation
 
-app.get('/users/:id', routeValidator({
-    response: { 200: z.object({ name: z.string() }) },
-    request: { params: z.object({ id: z.string().uuid() }) },
-    route: (req, res, next) => {
-        const user = getUserById(req.params.id)
-        res.json(user)
-    }
-}))
+Ensure your API responses match the expected schema:
+
+```typescript
+import { validateResponse } from 'express-zod-validation';
+
+app.get(
+  '/user/:id',
+  validateResponse({
+    200: z.object({ 
+      id: z.number(),
+      name: z.string(),
+    }),
+    404: z.object({ 
+      error: z.literal('User not found'),
+    }),
+  }),
+  (req, res) => {
+    // res.json({ message: 'this does not match schema' }); // Would throw an error
+    // res.status(201).json({ message: 'this has no schema' }) // Would throw an error
+
+    // Response will be validated against the appropriate schema
+    if (userExists)
+      res.json({ id: 1, name: 'John' });
+    else
+      res.status(404).json({ error: 'User not found' });
+  },
+);
+```
+
+## Testing
+
+This project maintains 100% test coverage. To run tests:
+
+```bash
+npm run test          # Run tests
+npm run test:coverage  # Run tests with coverage report
 ```
