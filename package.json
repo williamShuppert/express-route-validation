@@ -8,10 +8,10 @@
   "private": true,
   "scripts": {
     "clean": "npm run clean --workspaces",
+    "format": "prettier \"**/*\" --write --ignore-unknown",
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces",
-    "test:coverage": "npm run test:coverage --workspaces",
-    "format": "prettier \"**/*\" --write --ignore-unknown"
+    "test:coverage": "npm run test:coverage --workspaces"
   },
   "keywords": [],
   "author": "William Shuppert",
