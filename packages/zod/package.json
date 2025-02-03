@@ -23,5 +23,6 @@
   "dependencies": {
     "express-route-validation": "0.2.0",
     "zod": "^3.24.1"
-  }
+  },
+  "keywords": ["zod", "validation", "express", "middleware", "schema"]
 }
