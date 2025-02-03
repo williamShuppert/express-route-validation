@@ -25,5 +25,9 @@
   },
   "prettier": {
     "printWidth": 120
+  },
+  "repository": {
+    "type": "github",
+    "url": "https://github.com/williamShuppert/express-route-validation/tree/master/packages/core"
   }
 }
