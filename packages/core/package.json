@@ -1,0 +1,29 @@
+{
+  "name": "express-route-validation",
+  "version": "0.2.0",
+  "type": "module",
+  "module": "./dist/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "npm run clean && tsc",
+    "test": "tsx --test",
+    "test:only": "tsx --test --test-only",
+    "test:coverage": "c8 -r lcov -r text -r text-summary tsx --test"
+  },
+  "author": "William Shuppert",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "prettier": {
+    "printWidth": 120
+  }
+}
