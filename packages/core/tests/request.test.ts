@@ -17,7 +17,7 @@ describe("validateRequest()", () => {
 
     assert.equal(next.mock.callCount(), 1, "NextFunction should be called once");
     assert.equal(next.mock.calls[0]?.arguments.length, 0, "an error was passed to NextFunction");
-    assert.equal(req.body.username, "first-last", "Request object is not using validated data");
+    assert.equal(req.validated.body.username, "first-last", "Request object is not using validated data");
   });
 
   test("invalid request sends status code of 400", async () => {
@@ -34,7 +34,7 @@ describe("validateRequest()", () => {
     assert.equal(next.mock.callCount(), 0, "NextFunction should not be called");
     assert.equal(sendStatus.mock.callCount(), 1, "sendStatus was called more than once");
     assert.equal(sendStatus.mock.calls[0]?.arguments[0], 400, "Wrong status code sent");
-    assert.equal(req.body.modified, false, "Request object should not be modified");
+    assert.equal(req.validated, undefined, "Request object should have validated data");
   });
 
   test("errors thrown in a validator are passed to NextFunction", async () => {
@@ -57,6 +57,28 @@ describe("validateRequest()", () => {
 
     assert.equal(next.mock.callCount(), 1, "NextFunction was called more than once");
     assert.ok(next.mock.calls[0]?.arguments[0] instanceof TypeError, "NextFunction didn't receive correct error");
+  });
+
+  test("custom path", async () => {
+    const next = mock.fn();
+    const validateRequest = createRequestValidator({ path: "validateValues" });
+    const req = { body: { username: "first last" } } as Request;
+
+    const middleware = validateRequest((req, done) => {
+      let username = req.body.username as string;
+      username = username.replace(/\s/g, "-");
+      done({ body: { username } });
+    });
+    await middleware(req, {} as Response, next);
+
+    assert.equal(next.mock.callCount(), 1, "NextFunction should be called once");
+    assert.equal(next.mock.calls[0]?.arguments.length, 0, "an error was passed to NextFunction");
+    assert.equal(req.validated, undefined, "Validated data should not be found at req.validated");
+    assert.equal(
+      (req as any).validateValues.body.username,
+      "first-last",
+      "Request object is missing validated data at custom path",
+    );
   });
 
   test("custom BadRequestHandler", async () => {
@@ -83,7 +105,7 @@ describe("validateRequest()", () => {
   test("custom RequestAdapter", async () => {
     const next = mock.fn();
     const res = {
-      sendStatus: () => console.log("SendStatus"),
+      sendStatus: () => {},
     } as unknown as Response;
     const sendStatus = mock.method(res, "sendStatus");
 

@@ -1,6 +1,14 @@
 import type { Request, RequestHandler } from "express";
 import { isError, type Handler, type Validator, type ValidatorCallback } from "./shared.js";
 
+declare global {
+  namespace Express {
+    interface Request {
+      validated: any;
+    }
+  }
+}
+
 export type RequestValidator<ValidatorError> = Validator<Request, { [key: string]: any }, ValidatorError>;
 
 export type RequestAdapter<ValidatorError, AdapterParams extends any[]> = (
@@ -10,6 +18,7 @@ export type RequestAdapter<ValidatorError, AdapterParams extends any[]> = (
 export interface RequestConfig<ValidatorError, AdapterParams extends any[]> {
   badRequestHandler?: Handler<ValidatorError>;
   adapter?: RequestAdapter<ValidatorError, AdapterParams>;
+  path?: string;
 }
 
 export const createRequestValidator = <
@@ -22,6 +31,7 @@ export const createRequestValidator = <
     const requiredConfig = {
       badRequestHandler: (_err, _req, res) => res.sendStatus(400),
       adapter: (validator: RequestValidator<ValidatorError>) => validator,
+      path: "validated",
       ...config,
     } as Required<RequestConfig<ValidatorError, AdapterParams>>;
 
@@ -31,8 +41,11 @@ export const createRequestValidator = <
           try {
             if (isError<ValidatorError>(error)) return requiredConfig.badRequestHandler(error, req, res, next);
 
+            (req as any)[requiredConfig.path] = {};
+
             if (result !== undefined)
-              for (const [property, value] of Object.entries(result)) (req as any)[property] = value;
+              for (const [property, value] of Object.entries(result))
+                (req as any)[requiredConfig.path][property] = value;
 
             next();
           } catch (error) {

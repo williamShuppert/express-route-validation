@@ -15,6 +15,6 @@ export const isError = <Error>(error: any): error is Error => {
   // Empty arrays don't count as errors
   const isArray = Array.isArray(error);
   const isEmptyArray = isArray && error.length == 0;
-  const isDefined = !!error; //error != undefined && error != null
+  const isDefined = !!error;
   return isDefined && !isEmptyArray;
 };
