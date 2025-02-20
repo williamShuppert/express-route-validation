@@ -22,7 +22,7 @@ export const zodResponseAdapter: ResponseAdapter<
 };
 
 export const createResponseValidator = (
-  config?: Omit<ResponseConfig<z.ZodIssue[], [ZodResponseSchemas]>, "adapter">
+  config?: Omit<ResponseConfig<z.ZodIssue[], [ZodResponseSchemas]>, "adapter">,
 ) =>
   baseCreateResponseValidator({
     requireValidator: false,

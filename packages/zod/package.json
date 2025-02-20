@@ -24,7 +24,13 @@
     "express-route-validation": "0.3.0",
     "zod": "^3.24.1"
   },
-  "keywords": ["zod", "validation", "express", "middleware", "schema"],
+  "keywords": [
+    "zod",
+    "validation",
+    "express",
+    "middleware",
+    "schema"
+  ],
   "repository": {
     "type": "github",
     "url": "https://github.com/williamShuppert/express-route-validation/tree/master/packages/zod"

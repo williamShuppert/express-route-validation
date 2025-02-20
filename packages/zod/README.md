@@ -20,6 +20,7 @@ npm install @express-route-validation/zod
 ```
 
 ## Example
+
 ```ts
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -71,7 +72,7 @@ app.post(
     };
     users.push(user);
     res.status(201).json(user);
-  }
+  },
 );
 
 // Test cases
@@ -86,7 +87,7 @@ test("valid response", async () => {
   assert.equal(res.body.username, "my-username");
   assert.notEqual(
     users.find((user) => user.id == res.body.id),
-    undefined
+    undefined,
   );
 });
 
@@ -120,31 +121,35 @@ const validateRequest = createRequestValidator({
   badRequestHandler: (error: z.ZodIssue[], _req, res, _next) => {
     res.status(400).json({ error });
   },
-  path: 'validated',
+  path: "validated",
 });
 ```
 
-* **badResponseHandler**: called when a request fails validation
-* **path**: the location where validated data will be stored on the request object
+- **badResponseHandler**: called when a request fails validation
+- **path**: the location where validated data will be stored on the request object
 
-### Response 
+### Response
 
 ```ts
 import { createResponseValidator } from "@express-route-validation/zod";
 
 const validateResopnse = createResponseValidator({
   badResponseHandler: (_err, req, res) => {
-    console.warn(`Bad ${res.statusCode} Response at (${req.method}) ${req.originalUrl}`);
+    console.warn(
+      `Bad ${res.statusCode} Response at (${req.method}) ${req.originalUrl}`,
+    );
     res.sendStatus(500);
   },
   missingValidatorHandler: (_err, req, res) => {
-    console.warn(`Missing ${res.statusCode} Response Validator at (${req.method}) ${req.originalUrl}`);
+    console.warn(
+      `Missing ${res.statusCode} Response Validator at (${req.method}) ${req.originalUrl}`,
+    );
     res.sendStatus(500);
   },
   requireValidator: true,
 });
 ```
 
-* **badResponseHandler**: called when a response fails validation
-* **missingValidatorHandler**: called when a response has no validation schema
-* **requireValidator**: calls missingValidatorHandler when true
+- **badResponseHandler**: called when a response fails validation
+- **missingValidatorHandler**: called when a response has no validation schema
+- **requireValidator**: calls missingValidatorHandler when true

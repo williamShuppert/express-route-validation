@@ -9,7 +9,7 @@ const usernameSchema = z
   .max(20, "must contain at most 20 characters")
   .regex(
     /^[a-z0-9-]+$/,
-    "can only contain lowercase letters, numbers, and dashes"
+    "can only contain lowercase letters, numbers, and dashes",
   )
   .regex(/^[a-z0-9]/, "cannot start with a dash")
   .regex(/[a-z0-9]$/, "cannot end with a dash");
@@ -59,7 +59,7 @@ app.post(
     const user = db.users.insert(username, password);
     if (!user) return res.status(409).json({ message: "username taken" });
     res.status(201).json(user);
-  }
+  },
 );
 
 app.use(((error, _req, res, _next) => {

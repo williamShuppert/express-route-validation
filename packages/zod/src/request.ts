@@ -23,7 +23,7 @@ export const zodRequestAdapter: RequestAdapter<
 };
 
 export const createRequestValidator = (
-  config?: Omit<RequestConfig<z.ZodIssue[], [ZodRequestSchemas]>, "adapter">
+  config?: Omit<RequestConfig<z.ZodIssue[], [ZodRequestSchemas]>, "adapter">,
 ) =>
   baseCreateRequestValidator({
     adapter: zodRequestAdapter,

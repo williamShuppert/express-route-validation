@@ -19,7 +19,7 @@ describe("zod response validator", () => {
       mockNext({
         requestHandler: () =>
           res.json({ username: "user", password: "super secret" }),
-      })
+      }),
     );
 
     await wait(100); // wait because zod validators are async
@@ -34,7 +34,7 @@ describe("zod response validator", () => {
       res,
       mockNext({
         requestHandler: () => res.json({}),
-      })
+      }),
     );
 
     await wait(100);
@@ -48,7 +48,7 @@ describe("zod response validator", () => {
       res,
       mockNext({
         requestHandler: () => res.sendStatus(404),
-      })
+      }),
     );
 
     await wait(100);
