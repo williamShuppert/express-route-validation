@@ -88,14 +88,16 @@ describe("validateRequest()", () => {
     } as unknown as Response;
     const status = mock.method(res, "status");
     const json = mock.method(res, "json");
+    const next = mock.fn();
 
     const validateRequest = createRequestValidator({
       badRequestHandler: (error: string, _req, res, _next) => res.status(400).json({ error }),
     });
 
     const middleware = validateRequest((req, done) => done(req, "send this error"));
-    await middleware({} as Request, res, (err) => console.log(err));
+    await middleware({} as Request, res, next);
 
+    assert.equal(next.mock.callCount(), 0, "next function should not be called");
     assert.equal(status.mock.callCount(), 1);
     assert.equal(status.mock.calls[0]?.arguments[0], 400, "wrong status code");
     assert.equal(json.mock.callCount(), 1);
