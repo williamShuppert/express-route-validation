@@ -44,7 +44,7 @@ export const createRequestValidator = (
           issue = { messages: [], location: error.path };
           issues.set(key, issue);
         }
-        issue.messages.push(error.message.toLowerCase());
+        issue.messages.push(error.message);
       }
 
       res.status(400).json({ errors: Array.from(issues.values()) });

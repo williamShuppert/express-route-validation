@@ -22,7 +22,7 @@ describe("zod request validator", () => {
       errors: [
         {
           location: ["body", "username"],
-          messages: ["string must contain at least 3 character(s)"],
+          messages: ["String must contain at least 3 character(s)"],
         },
       ],
     });
