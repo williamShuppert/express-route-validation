@@ -34,7 +34,7 @@ describe("zod request validator", () => {
     await middleware(req, res, () => {});
 
     assert.equal(res.statusCode, 200);
-    assert.equal(req.body.number, 5);
-    assert.notEqual(req.body.number, "5");
+    assert.equal(req.validated.body.number, 5);
+    assert.notEqual(req.validated.body.number, "5");
   });
 });

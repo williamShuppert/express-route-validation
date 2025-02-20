@@ -51,7 +51,7 @@ app.post(
     }),
   }),
   (req, res): any => {
-    const { username, password, test } = req.body;
+    const { username, password, test } = req.validated.body;
 
     if (test.useMissingResponseValidator) return res.sendStatus(501);
     if (test.useBadResponse) return res.sendStatus(409);

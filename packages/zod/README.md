@@ -59,7 +59,7 @@ app.post(
     }),
   }),
   (req, res): any => {
-    const { username, password } = req.body;
+    const { username, password } = req.validated.body;
 
     const exists = users.find((user) => user.username);
     if (exists) return res.status(409).json({ message: "username taken" });
@@ -120,10 +120,12 @@ const validateRequest = createRequestValidator({
   badRequestHandler: (error: z.ZodIssue[], _req, res, _next) => {
     res.status(400).json({ error });
   },
+  path: 'validated',
 });
 ```
 
 * **badResponseHandler**: called when a request fails validation
+* **path**: the location where validated data will be stored on the request object
 
 ### Response 
 
