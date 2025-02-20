@@ -11,7 +11,9 @@
     "format": "prettier \"**/*\" --write --ignore-unknown",
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces",
-    "test:coverage": "npm run test:coverage --workspaces"
+    "test:coverage": "npm run test:coverage --workspaces",
+    "prepublish": "npm run format && npm run clean && npm run build",
+    "publish": "npm publish --workspaces"
   },
   "keywords": [],
   "author": "William Shuppert",
